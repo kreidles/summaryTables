@@ -1,0 +1,10 @@
+Package: summaryTables
+Type: Package
+Title: summaryTables: Functions to build common summary tables in biomedical manuscripts
+Version: 0.1.0
+Date: 2015-01-22
+Author: Sarah Kreidler
+Maintainer: Sarah Kreidler <sarah5280@gmail.com>
+Description: This library produces summary tables in various formats for biomedical manuscripts
+Depends: 
+License: GPL-3
