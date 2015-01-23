@@ -40,27 +40,35 @@ pasteCategorical <- function(tableRow) {
 #
 # Build a single column in the data table
 #
-buildColumn <- function(data, vars, isCategorical) {
+buildColumn <- function(data, vars, isCategorical, stratifyBy=NA, level=NA) {
   return (
     unlist(sapply(1:length(vars), function(i) {
       varname = vars[i]
       if (isCategorical[i]) {
         # categorical var
-        varAsFactor = as.factor(varname)
-        varFreq = table(data[,varname])
+        varLevels = levels(as.factor(data[,varname]))
+        if (!is.na(stratifyBy) && !is.na(level)) {
+          varFreq = table(data[data[,stratifyBy] == level,varname])
+        } else {
+          varFreq = table(data[,varname]) 
+        }
         varFreq = cbind(varFreq,prop.table(varFreq))
         
-        return(c("", sapply(1:nrow(varFreq), function(i) {
-          return(pasteCategorical(varFreq[i,]))
+        return(c("", sapply(1:length(varLevels), function(i) {
+          return(pasteCategorical(tryCatch(varFreq[varLevels[i],], 
+                                           error=function(e) {return(c(0,0))})))
         })))
         
       } else {
         # continuous var
-        return(pasteContinuous(data[,varname]))
+        if (!is.na(stratifyBy) && !is.na(level)) {
+          return(pasteContinuous(data[data[,stratifyBy] == level,varname]))
+        } else {
+          return(pasteContinuous(data[,varname]))
+        }
       }
     }))
-    
-    )
+  )
 }
 
 #
@@ -69,8 +77,7 @@ buildColumn <- function(data, vars, isCategorical) {
 # Build a summary table, optionally stratified by a 
 #
 #
-summaryTable <- function(data, vars=NULL, isCategorical=NULL, names=NULL,stratifyBy=NA,
-                         main="") {
+summaryTable <- function(data, vars=NULL, isCategorical=NULL, names=NULL,stratifyBy=NA) {
   
   #---------------
   # error checking
@@ -101,21 +108,6 @@ summaryTable <- function(data, vars=NULL, isCategorical=NULL, names=NULL,stratif
       return(ifelse(is.null(names),varname,names[i]))
     }
   }))
-#   # create the row labels for continuous variables
-#   if (!is.null(continuousNames)) {
-#     continuousLabels = continuousNames
-#   } else {
-#     continuousLabels = continuousVars
-#   }
-#   # create the row labels for categorical variables
-#   categoricalLabels = NULL
-#   if (!is.null(categoricalVars)) {
-#     categoricalLabels = sapply(1:length(categoricalVars), function(i) {
-#       varname = categoricalVars[i]
-#       varAsFactor = as.factor(data[,varname])
-#       return(c(ifelse(is.null(categoricalNames),varname,categoricalNames[i]), levels(varAsFactor)))
-#     })
-#   }
   
   # add the labels to the table
   tableData = data.frame(labels=labels)
@@ -129,23 +121,16 @@ summaryTable <- function(data, vars=NULL, isCategorical=NULL, names=NULL,stratif
   if (!is.na(stratifyBy)) {
     stratifyFactor = as.factor(data[, stratifyBy])
     for(level in levels(stratifyFactor)) {
-      tableData[,level] = 
-        buildColumn(data[data[,stratifyFactor] == level, ], vars, isCategorical)
+      tableData[,paste(c(stratifyBy, "_", level), collapse="")] = 
+        buildColumn(data, vars, isCategorical, stratifyBy=stratifyBy, level=level)
     }
   }
   
   #---------------------------------------
-  # Output the table in the desired format
+  # return the table 
   #---------------------------------------
-  
-  if (format == "data.frame") {
-    return(tableData)
-  } else if (format == "rtf") {
-    
-  } else if (format == "latex") {
-    return (xtable(tableData))
-  }
+  return (tableData)
   
 }
 
-tmp = summaryTable(mtcars, vars=c("mpg", "cyl", "disp"), isCategorical=c(0,1,0))
+tmp = summaryTable(mtcars, vars=c("mpg", "cyl", "disp"), isCategorical=c(0,1,0), stratifyBy="am")
