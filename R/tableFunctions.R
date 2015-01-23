@@ -37,6 +37,31 @@ pasteCategorical <- function(tableRow) {
   return(paste(sep="", tableRow[1], " (", round(tableRow[2]*100, digits=1), "%)"))  
 }
 
+#
+# Build a single column in the data table
+#
+buildColumn <- function(data, vars, isCategorical) {
+  return (
+    unlist(sapply(1:length(vars), function(i) {
+      varname = vars[i]
+      if (isCategorical[i]) {
+        # categorical var
+        varAsFactor = as.factor(varname)
+        varFreq = table(data[,varname])
+        varFreq = cbind(varFreq,prop.table(varFreq))
+        
+        return(c("", sapply(1:nrow(varFreq), function(i) {
+          return(pasteCategorical(varFreq[i,]))
+        })))
+        
+      } else {
+        # continuous var
+        return(pasteContinuous(data[,varname]))
+      }
+    }))
+    
+    )
+}
 
 #
 # summaryTable
@@ -44,63 +69,69 @@ pasteCategorical <- function(tableRow) {
 # Build a summary table, optionally stratified by a 
 #
 #
-summaryTable <- function(data, continuousVars=NULL, categoricalVars=NULL, stratifyBy=NA,
-                         main="", 
-                         format="data.frame", continuousNames=NULL, categoricalNames=NULL) {
+summaryTable <- function(data, vars=NULL, isCategorical=NULL, names=NULL,stratifyBy=NA,
+                         main="") {
   
   #---------------
   # error checking
   #---------------
-  if (is.null(continuousVars) && is.null(categoricalVars)) {
+  if (is.null(vars)) {
     stop("No variables specified")
   }
   # if names are specified, make sure they match the number of variables
-  if (!is.null(continuousNames) && length(continuousNames) != length(continuousVars)){
-    stop("length of continuousNames vector must match length of continuousVars vector")
+  if (!is.null(names) && length(names) != length(vars)){
+    stop("length of names vector must match length of vars vector")
   }
   # if names are specified, make sure they match the number of variables
-  if (!is.null(categoricalNames) && length(categoricalNames) != length(categoricalVars)){
-    stop("length of categoricalNames vector must match length of categoricalVars vector")
+  if (!is.null(isCategorical) && length(isCategorical) != length(vars)){
+    stop("length of isCategorical vector must match length of vars vector")
   }
   
   #----------------------------------
   # Build data frame for table output
   #----------------------------------
-  # create the row labels for continuous variables
-  if (!is.null(continuousNames)) {
-    continuousLabels = continuousNames
-  } else {
-    continuousLabels = continuousVars
-  }
-  # create the row labels for categorical variables
-  categoricalLabels = sapply(categoricalVars, function(varname) {
-    varAsFactor = as.factor(data[,varname])
-    return(c(varname, levels(varAsFactor)))
-  })
+  # create the labels
+  labels = unlist(sapply(1:length(vars), function(i) {
+    varname = vars[i]
+    if (isCategorical[i]) {
+      varAsFactor = as.factor(data[,varname])
+      return(c(ifelse(is.null(names),varname,names[i]), levels(varAsFactor)))
+    } else {
+      # continuous var
+      return(ifelse(is.null(names),varname,names[i]))
+    }
+  }))
+#   # create the row labels for continuous variables
+#   if (!is.null(continuousNames)) {
+#     continuousLabels = continuousNames
+#   } else {
+#     continuousLabels = continuousVars
+#   }
+#   # create the row labels for categorical variables
+#   categoricalLabels = NULL
+#   if (!is.null(categoricalVars)) {
+#     categoricalLabels = sapply(1:length(categoricalVars), function(i) {
+#       varname = categoricalVars[i]
+#       varAsFactor = as.factor(data[,varname])
+#       return(c(ifelse(is.null(categoricalNames),varname,categoricalNames[i]), levels(varAsFactor)))
+#     })
+#   }
   
   # add the labels to the table
-  tableData = data.frame(labels=c(continuousLabels, categoricalLabels))
+  tableData = data.frame(labels=labels)
   
   
   # bind the summary rows for the data overall
-  tableData$overall = c(sapply(continuousVars, function(varname) {
-      return(pasteContinuous(data[,varname]))
-    }),
-    sapply(categoricalVars, function(varname) {
-      varAsFactor = as.factor(varname)
-      varFreq = table(data[,varname])
-      varFreq = cbind(varFreq,prop.table(varFreq))
-      
-      return(c("", sapply(1:nrow(varFreq), function(i) {
-        return(pasteCategorical(varFreq[i,]))
-      })))
-    })
-  )
+  tableData$overall = buildColumn(data, vars, isCategorical)
   
   
   # add stratified columns
   if (!is.na(stratifyBy)) {
-    
+    stratifyFactor = as.factor(data[, stratifyBy])
+    for(level in levels(stratifyFactor)) {
+      tableData[,level] = 
+        buildColumn(data[data[,stratifyFactor] == level, ], vars, isCategorical)
+    }
   }
   
   #---------------------------------------
@@ -117,4 +148,4 @@ summaryTable <- function(data, continuousVars=NULL, categoricalVars=NULL, strati
   
 }
 
-tmp = summaryTable(mtcars, continuousVars=c("mpg", "disp"), categoricalVars=c("cyl"))
+tmp = summaryTable(mtcars, vars=c("mpg", "cyl", "disp"), isCategorical=c(0,1,0))
