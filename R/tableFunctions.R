@@ -133,4 +133,4 @@ summaryTable <- function(data, vars=NULL, isCategorical=NULL, names=NULL,stratif
   
 }
 
-tmp = summaryTable(mtcars, vars=c("mpg", "cyl", "disp"), isCategorical=c(0,1,0), stratifyBy="am")
+#tmp = summaryTable(mtcars, vars=c("mpg", "cyl", "disp"), isCategorical=c(0,1,0), stratifyBy="am")
