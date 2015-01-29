@@ -26,7 +26,8 @@
 # in Table 1
 #
 pasteContinuous <- function(varname, digits=2) {
-  return(paste(round(mean(varname, na.rm=TRUE), digits=digits), "\u00B1", round(sd(varname, na.rm=TRUE), digits=digits)))
+  return(paste(c(round(mean(varname, na.rm=TRUE), digits=digits), 
+               " \\u177\\3 ", round(sd(varname, na.rm=TRUE), digits=digits)),collapse=""))
 }
 
 #
@@ -77,7 +78,8 @@ buildColumn <- function(data, vars, isCategorical, stratifyBy=NA, level=NA) {
 # Build a summary table, optionally stratified by a 
 #
 #
-summaryTable <- function(data, vars=NULL, isCategorical=NULL, names=NULL,stratifyBy=NA) {
+summaryTable <- function(data, vars=NULL, isCategorical=NULL, names=NULL,stratifyBy=NA,
+                         columnLabels=NULL) {
   
   #---------------
   # error checking
@@ -102,7 +104,11 @@ summaryTable <- function(data, vars=NULL, isCategorical=NULL, names=NULL,stratif
     varname = vars[i]
     if (isCategorical[i]) {
       varAsFactor = as.factor(data[,varname])
-      return(c(ifelse(is.null(names),varname,names[i]), levels(varAsFactor)))
+      
+      return(c(
+        ifelse(is.null(names),varname,names[i]), 
+              unlist(sapply(levels(varAsFactor), function(level) { return(paste(c("\\li360", level),collapse=" "))}))
+        ))
     } else {
       # continuous var
       return(ifelse(is.null(names),varname,names[i]))
@@ -129,8 +135,13 @@ summaryTable <- function(data, vars=NULL, isCategorical=NULL, names=NULL,stratif
   #---------------------------------------
   # return the table 
   #---------------------------------------
+  if (!is.null(columnLabels)) {
+    names(tableData) = columnLabels
+  }
+  
   return (tableData)
   
 }
 
-#tmp = summaryTable(mtcars, vars=c("mpg", "cyl", "disp"), isCategorical=c(0,1,0), stratifyBy="am")
+tmp = summaryTable(mtcars, vars=c("mpg", "cyl", "disp"), isCategorical=c(0,1,0), stratifyBy="am",
+                   columnLabels=c(" ", "Overall\nFoo", "Foreign Cars", "American Cars"))
